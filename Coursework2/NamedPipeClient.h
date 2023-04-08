@@ -53,8 +53,7 @@ private:
 
 	std::string sendMessage(LPCSTR lpvMessage);
 	std::string readBuffer();
-	void parseBuffer(std::string response);
-	void addItem(Item item);
+	void addItemFromString(std::string response);
 
 public:
 	NamedPipeClient(Data* pData);

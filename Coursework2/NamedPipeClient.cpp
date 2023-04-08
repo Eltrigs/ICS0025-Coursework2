@@ -29,7 +29,7 @@ void NamedPipeClient::executeCommand(std::string command)
             this->isLoopDone = FALSE;
             std::thread infiniteThreads([this]() {
                 std::string response = this->sendMessage("ready");
-                this->parseBuffer(response);
+                this->addItemFromString(response);
                 });
             infiniteThreads.join();
             this->isLoopDone = TRUE;
@@ -115,7 +115,7 @@ int NamedPipeClient::connect()
 
     // Send the first ready message to the pipe server.
     std::string response = this->sendMessage("ready");
-    this->parseBuffer(response);
+    this->addItemFromString(response);
 
     return 0;
 }
@@ -248,7 +248,7 @@ std::string NamedPipeClient::readBuffer()
     return response;
 }
 
-void NamedPipeClient::parseBuffer(std::string str)
+void NamedPipeClient::addItemFromString(std::string str)
 {
     std::vector<std::string> words;
     std::istringstream iss(str);
@@ -297,10 +297,6 @@ void NamedPipeClient::parseBuffer(std::string str)
         // Some weird month
         std::cout << "Failed to parse month";
     }
-}
-
-void NamedPipeClient::addItem(Item item)
-{
 }
 
 NamedPipeClient::NamedPipeClient(Data* pData)
