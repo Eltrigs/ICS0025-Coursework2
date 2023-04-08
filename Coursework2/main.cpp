@@ -1,4 +1,4 @@
-#include "Main.h"
+﻿#include "Main.h"
 
 static const char* NamesFile = "Birds.txt"; // http://www.jimpalt.org/birdwatcher/name.html 941 names of different birds, ASCII code, OD OA after each row
 default_random_engine Generator;
@@ -21,6 +21,15 @@ int main()
 	while (true)
 	{
 		std::cin >> command;
+
+		//To get back from this infinite loop the user has to type exit in the console
+		//Then the final commands will be sent and the application will exit safely
+		if (command.compare("exit") == 0)
+		{
+			commandThread = std::thread([&] { pipeClient.executeCommand(command); });
+			commandThread.join();
+			break;
+		}
 
 		//Since everything needs to be run concurrently, start a thread for every command
 		commandThread = std::thread ([&] { pipeClient.executeCommand(command); });
