@@ -7,6 +7,37 @@ static vector<string> Names;
 uniform_int_distribution<int> GroupDistribution('A', 'Z');
 uniform_int_distribution<int> SubgroupDistribution(0, 99);
 
+int main()
+{
+	//Create a new Data() to which the pipeserver is going to write information
+	Data* pData = new Data();
+
+	//Create the pipeserver object and give it a reference to the DataStructure
+	NamedPipeClient pipeClient = NamedPipeClient(pData);
+
+	std::thread commandThread;
+	std::string command;
+	//Start asking for inputs from the console to the pipeserver
+	while (true)
+	{
+		std::cin >> command;
+
+		//Since everything needs to be run concurrently, start a thread for every command
+		commandThread = std::thread ([&] { pipeClient.executeCommand(command); });
+		
+		// Detaching might actually be dangerous:
+		/* When a program terminates (ie, main returns) the remaining detached threads 
+		 * executing in the background are not waited upon; 
+		 * instead their execution is suspended and their thread-local objects are not destructed.
+		 * https://stackoverflow.com/questions/22803600/when-should-i-use-stdthreaddetach
+		 */
+		commandThread.detach();
+	}
+
+	return 0;
+}
+
+
 void PrepareNames()
 {
 	ifstream file;
@@ -29,20 +60,4 @@ string CreateRandomName()
 {
 	int i = NameDistribution(Generator);
 	return Names[i];
-}
-
-int main()
-{
-	PrepareNames();
-	Test();
-	return 0;
-}
-
-void Test()
-{
-	Data* pData = new Data(20);
-	pData->PrintAll();
-	cout << endl;
-
-
 }
