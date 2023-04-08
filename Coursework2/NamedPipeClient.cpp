@@ -1,5 +1,6 @@
 #include "NamedPipeClient.h"
 
+
 void NamedPipeClient::executeCommand(std::string command)
 {
     if (command.compare("ECHO") == 0)
@@ -27,7 +28,7 @@ void NamedPipeClient::executeCommand(std::string command)
             }
             this->isLoopDone = FALSE;
             std::thread infiniteThreads([this]() {
-                char* response = this->sendMessage("ready");
+                std::string response = this->sendMessage("ready");
                 this->parseBuffer(response);
                 });
             infiniteThreads.join();
@@ -58,8 +59,7 @@ int NamedPipeClient::connect()
     BOOL fSuccess = FALSE;
     LPCTSTR lpszPipename = PIPESERVERNAME;
     LPCSTR lpvMessage = "ready";
-    char chBuf[BUFSIZE];
-    DWORD cbRead, cbToWrite, cbWritten, dwMode;
+    DWORD dwMode;
 
     // Try to open a named pipe; wait for it, if necessary. 
 
@@ -114,7 +114,10 @@ int NamedPipeClient::connect()
     }
 
     // Send the first ready message to the pipe server.
-    this->sendMessage("ready");
+    std::string response = this->sendMessage("ready");
+    this->parseBuffer(response);
+
+    return 0;
 }
 
 void NamedPipeClient::stop()
@@ -151,7 +154,7 @@ void NamedPipeClient::exit()
 
 }
 
-char* NamedPipeClient::sendMessage(LPCSTR lpvMessage)
+std::string NamedPipeClient::sendMessage(LPCSTR lpvMessage)
 {
     DWORD cbToWrite, cbWritten, dwMode;
     BOOL fSuccess = FALSE;
@@ -200,7 +203,7 @@ char* NamedPipeClient::sendMessage(LPCSTR lpvMessage)
 
 }
 
-char* NamedPipeClient::readBuffer()
+std::string NamedPipeClient::readBuffer()
 {
     BOOL fSuccess = FALSE;
     char chBuf[BUFSIZE];
@@ -236,12 +239,64 @@ char* NamedPipeClient::readBuffer()
         return nullptr;
     }
 
-    return chBuf;
+    //Apparently the buffer didn't include a \0 terminator so let's add it ourselves
+    //Make it into a std::string at the same time.
+    char temp[BUFSIZE+1];
+    memcpy(temp, (const char*)chBuf, cbRead);
+    temp[cbRead] = '\0';
+    std::string response = std::string(temp);
+    return response;
 }
 
-void NamedPipeClient::parseBuffer(char* chBuf)
+void NamedPipeClient::parseBuffer(std::string str)
 {
-    
+    std::vector<std::string> words;
+    std::istringstream iss(str);
+    std::string word;
+    while (iss >> word) {
+        words.push_back(word);
+    }
+
+    char group = words[0].at(0);
+    int subgroup = std::stoi(words[1]);
+        
+    std::string name = std::accumulate(std::next(words.begin() + 1), std::prev(words.end(), 3), std::string(""),
+        [](const std::string& a, const std::string& b) {
+            return a + " " + b;
+        }
+    );
+    name.erase(std::remove_if(name.begin(), name.end(), [](char c) { return (c == '<' || c == '>'); }), name.end());
+
+    int day = std::stoi(words[words.size() - 3]);
+    std::string s_month = words[words.size() - 2];
+    int year = std::stoi(words[words.size() - 1]);
+
+    static const std::unordered_map<std::string, int> monthMap{
+       {"Jan", 1},
+       {"Feb", 2},
+       {"Mar", 3},
+       {"Apr", 4},
+       {"May", 5},
+       {"Jun", 6},
+       {"Jul", 7},
+       {"Aug", 8},
+       {"Sep", 9},
+       {"Oct", 10},
+       {"Nov", 11},
+       {"Dec", 12}
+    };
+
+    auto it = monthMap.find(s_month);
+    if (it != monthMap.end()) {
+         int month = it->second;
+         //std::cout << "Extracted:\n\tGroup: " << group << "\n\tSubgroup:" << subgroup << "\n\tName: " << name << "\n\tD,M,Y: " << day << month << year << std::endl;
+         Item newItem = Item(group, subgroup, name, Date(day, month, year));
+         this->refToData->InsertItem(group, subgroup, name, Date(day, month, year));
+    }
+    else {
+        // Some weird month
+        std::cout << "Failed to parse month";
+    }
 }
 
 void NamedPipeClient::addItem(Item item)

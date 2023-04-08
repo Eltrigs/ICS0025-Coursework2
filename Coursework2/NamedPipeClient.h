@@ -7,6 +7,10 @@
 #include <tchar.h>
 #include <thread>
 #include <iostream>
+#include <sstream>
+#include <vector>
+#include <numeric>
+#include <unordered_map>
 
 #define BUFSIZE 1024
 #define PIPESERVERNAME L"\\\\.\\pipe\\ICS0025"
@@ -47,9 +51,9 @@ private:
 	 */
 	void exit();
 
-	char* sendMessage(LPCSTR lpvMessage);
-	char* readBuffer();
-	void parseBuffer(char* chBuf);
+	std::string sendMessage(LPCSTR lpvMessage);
+	std::string readBuffer();
+	void parseBuffer(std::string response);
 	void addItem(Item item);
 
 public:
